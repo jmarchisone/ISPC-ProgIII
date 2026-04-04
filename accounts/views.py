@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer, UserSerializer, UserProfileSerializer, PasswordResetRequestSerializer, PasswordResetVerifySerializer
+from .serializers import RegisterSerializer, UserSerializer, UserProfileSerializer, PasswordResetRequestSerializer, PasswordResetVerifySerializer, ChangePasswordSerializer
 from .models import UserProfile
 import random
 from django.utils import timezone
@@ -97,5 +97,34 @@ class PasswordResetVerifyView(APIView):
                 
             except (User.DoesNotExist, UserProfile.DoesNotExist):
                 return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class UserDetailView(APIView):
+    # EXIGE EL TOKEN
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        # request.user ya contiene el usuario autenticado gracias al token
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ChangePasswordView(APIView):
+    # EXIGE EL TOKEN
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            
+            # Verificamos que la contraseña actual sea correcta
+            if not user.check_password(serializer.validated_data['old_password']):
+                return Response({"error": "La contraseña actual es incorrecta."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Si es correcta, seteamos la nueva y guardamos
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({"message": "Contraseña actualizada exitosamente."}, status=status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

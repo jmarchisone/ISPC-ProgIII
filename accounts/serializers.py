@@ -36,3 +36,7 @@ class PasswordResetVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=4)
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
